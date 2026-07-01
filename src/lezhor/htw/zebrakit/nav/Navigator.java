@@ -5,9 +5,14 @@ import java.util.List;
 
 public interface Navigator {
     /**
-     * Initializes the navigator's internal map using the board's seed.
+     * Initializes the navigator's internal map using the board's seed (offline testing).
      */
     void initialize(long seed);
+
+    /**
+     * Initializes the navigator's internal map using a live NetworkClient.
+     */
+    void initialize(lenz.htw.zebrakit.net.NetworkClient client);
 
     /**
      * Calculates the full path from start to end.

@@ -10,7 +10,13 @@ public class NavMeshNavigator implements Navigator {
         // TODO: Extract polygon outlines from the grid.
         // TODO: Triangulate walkable space using Constrained Delaunay Triangulation.
         // TODO: Merge triangles into convex polygons (Hertel-Mehlhorn).
-        System.out.println("NavMeshNavigator initialization is currently a stub.");
+        System.out.println("NavMeshNavigator initialization (seed) is currently a stub.");
+    }
+
+    @Override
+    public void initialize(lenz.htw.zebrakit.net.NetworkClient client) {
+        // TODO: Extract polygon outlines using the live network client map.
+        System.out.println("NavMeshNavigator initialization (client) is currently a stub.");
     }
 
     @Override

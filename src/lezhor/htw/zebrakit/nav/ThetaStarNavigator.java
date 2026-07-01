@@ -22,9 +22,22 @@ public class ThetaStarNavigator implements Navigator {
         this.scaledSize = MAP_SIZE / scale;
     }
 
+    private interface WalkabilityChecker {
+        boolean isWalkable(int x, int y);
+    }
+
     @Override
     public void initialize(long seed) {
         e board = new e(seed);
+        initGridAndInflate((x, y) -> board.a(x, y) != 0);
+    }
+
+    @Override
+    public void initialize(lenz.htw.zebrakit.net.NetworkClient client) {
+        initGridAndInflate(client::isWalkable);
+    }
+
+    private void initGridAndInflate(WalkabilityChecker checker) {
         grid = new boolean[scaledSize][scaledSize];
 
         for (int sx = 0; sx < scaledSize; sx++) {
@@ -39,12 +52,10 @@ public class ThetaStarNavigator implements Navigator {
         // Populate grid and apply inflation
         for (int x = 0; x < MAP_SIZE; x++) {
             for (int y = 0; y < MAP_SIZE; y++) {
-                if (board.a(x, y) == 0) {
+                if (!checker.isWalkable(x, y)) {
                     int sx = x / scale;
                     int sy = y / scale;
 
-                    // If it's already an obstacle and we don't need to inflate much, we could optimize,
-                    // but doing the circle inflation for every obstacle pixel is fast enough for init.
                     int minX = Math.max(0, sx - scaledInflation);
                     int maxX = Math.min(scaledSize - 1, sx + scaledInflation);
                     int minY = Math.max(0, sy - scaledInflation);
