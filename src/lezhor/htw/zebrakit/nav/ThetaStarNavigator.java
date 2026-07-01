@@ -169,6 +169,18 @@ public class ThetaStarNavigator implements Navigator {
     }
 
     @Override
+    public double getPathDistance(Point start, Point end) {
+        List<Point> path = findPath(start, end);
+        if (path == null) return Double.MAX_VALUE;
+        
+        double totalDist = 0.0;
+        for (int i = 0; i < path.size() - 1; i++) {
+            totalDist += path.get(i).distance(path.get(i + 1));
+        }
+        return totalDist;
+    }
+
+    @Override
     public double[] getNextMoveDirection(Point currentPos, Point targetPos) {
         List<Point> path = findPath(currentPos, targetPos);
         if (path == null || path.size() < 2) {

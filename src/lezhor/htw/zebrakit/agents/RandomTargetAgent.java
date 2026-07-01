@@ -20,7 +20,7 @@ public class RandomTargetAgent {
 
         // 1. Initialize Navigator using the live client
         System.out.println("Initializing ThetaStar Navigator...");
-        Navigator navigator = new ThetaStarNavigator(8, 2);
+        Navigator navigator = new ThetaStarNavigator(4, 2);
         navigator.initialize(client);
         System.out.println("Navigator ready. Game loop started.");
 

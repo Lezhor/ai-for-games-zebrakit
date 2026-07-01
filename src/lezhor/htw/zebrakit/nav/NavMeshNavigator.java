@@ -27,6 +27,12 @@ public class NavMeshNavigator implements Navigator {
     }
 
     @Override
+    public double getPathDistance(Point start, Point end) {
+        System.out.println("NavMeshNavigator.getPathDistance is currently a stub.");
+        return Double.MAX_VALUE;
+    }
+
+    @Override
     public double[] getNextMoveDirection(Point currentPos, Point targetPos) {
         List<Point> path = findPath(currentPos, targetPos);
         if (path == null || path.size() < 2) {
