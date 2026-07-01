@@ -217,8 +217,9 @@ public class ConvolutionAgent {
         }
 
         double totalOtherScore = Math.max(1, scoreA + scoreB);
-        double weightA = 1.0 + (scoreA / totalOtherScore);
-        double weightB = 1.0 + (scoreB / totalOtherScore);
+        // Exaggerate the weight of the winning opponent
+        double weightA = 1.0 + 2.0 * (scoreA / totalOtherScore);
+        double weightB = 1.0 + 2.0 * (scoreB / totalOtherScore);
 
         for (int gx = 0; gx < GRID_SIZE; gx++) {
             for (int gy = 0; gy < GRID_SIZE; gy++) {
@@ -244,7 +245,9 @@ public class ConvolutionAgent {
                         otherVal = r * weightA + g * weightB;
                     }
 
-                    cellScores[gx][gy] = (255 - myVal) + otherVal;
+                    // Multiply our own potential gain by 2.0 so we strictly prefer
+                    // an opponent's color (where we gain points) over white (where our color is already maxed).
+                    cellScores[gx][gy] = (255 - myVal) * 2.0 + otherVal;
                 } else {
                     cellScores[gx][gy] = 0;
                 }

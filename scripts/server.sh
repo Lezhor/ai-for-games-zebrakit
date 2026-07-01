@@ -86,12 +86,12 @@ if [ "$LOOP" -eq 1 ]; then
         echo "----------------------------------------"
         echo "Starting Server Instance"
         echo "----------------------------------------"
-        
+
         java -jar server/zebrakit.jar "${ARGS[@]}"
 
         echo "Server instance exited."
-        echo "Restarting in 2 seconds..."
-        sleep 2
+        echo "Restarting in 1 seconds..."
+        sleep 1
     done
 else
     java -jar server/zebrakit.jar "${ARGS[@]}"
