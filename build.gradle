@@ -20,5 +20,5 @@ sourceSets {
 }
 
 application {
-    mainClass = 'lezhor.htw.zebrakit.Dummy'
+    mainClass = 'lezhor.htw.zebrakit.RandomAgent'
 }
