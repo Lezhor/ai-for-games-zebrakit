@@ -20,5 +20,5 @@ sourceSets {
 }
 
 application {
-    mainClass = 'lezhor.htw.zebrakit.RandomAgent'
+    mainClass = project.hasProperty('agent') ? "lezhor.htw.zebrakit.agents.${project.getProperty('agent')}" : 'lezhor.htw.zebrakit.agents.Dummy'
 }

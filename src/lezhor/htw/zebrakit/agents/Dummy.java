@@ -1,4 +1,4 @@
-package lezhor.htw.zebrakit;
+package lezhor.htw.zebrakit.agents;
 
 import lenz.htw.zebrakit.net.NetworkClient;
 import lenz.htw.zebrakit.Update;
