@@ -1,25 +1,28 @@
-package lezhor.htw.zebrakit.nav;
+package lezhor.htw.zebrakit.movement.nav;
 
 import lenz.htw.zebrakit.net.NetworkClient;
+import lezhor.htw.zebrakit.analysis.OpponentWeights;
+import lezhor.htw.zebrakit.analysis.TerritoryUtils;
+import lezhor.htw.zebrakit.core.BoardConstants;
+import lezhor.htw.zebrakit.core.BotContext;
+import lezhor.htw.zebrakit.core.GameState;
+import lezhor.htw.zebrakit.core.Vector2;
 
 import java.awt.Point;
 import java.util.*;
 
 public class ColorAStarNavigator implements Navigator {
-    private static final int MAP_SIZE = 1024;
+    private static final int MAP_SIZE = BoardConstants.MAP_SIZE;
     private final int inflationRadius;
     private final int scale;
     private final int scaledSize;
 
-    private boolean[][] grid; 
+    private boolean[][] grid;
     private NetworkClient client;
     private int myPlayerNumber;
     private int currentBotRadius = 15; // Default radius
 
-    public static final double MY_COLOR_GAIN_WEIGHT = 2.0;       
-    public static final double LEADER_COLOR_STRIKE_WEIGHT = 3.0; 
-    public static final double LOSER_COLOR_STRIKE_WEIGHT = 1.5;  
-    public static final double MAX_PATH_PENALTY = 15.0;          
+    public static final double MAX_PATH_PENALTY = 15.0;
 
     private static class Node {
         int x, y;
@@ -37,7 +40,7 @@ public class ColorAStarNavigator implements Navigator {
     }
 
     public ColorAStarNavigator() {
-        this(8, 2); 
+        this(8, 2);
     }
 
     public ColorAStarNavigator(int inflationRadius, int scale) {
@@ -114,7 +117,7 @@ public class ColorAStarNavigator implements Navigator {
     @Override
     public List<Point> findPath(Point start, Point end) {
         if (grid == null) return null;
-        
+
         Point sStart = new Point(start.x / scale, start.y / scale);
         Point sEnd = new Point(end.x / scale, end.y / scale);
 
@@ -136,22 +139,11 @@ public class ColorAStarNavigator implements Navigator {
 
         Node targetNode = null;
 
-        long score0 = client != null ? client.getScore(0) : 0;
-        long score1 = client != null ? client.getScore(1) : 0;
-        long score2 = client != null ? client.getScore(2) : 0;
-
-        int opponentA = -1; // leader
-        int opponentB = -1; // loser
-        if (myPlayerNumber == 0) {
-            if (score1 >= score2) { opponentA = 1; opponentB = 2; }
-            else { opponentA = 2; opponentB = 1; }
-        } else if (myPlayerNumber == 1) {
-            if (score0 >= score2) { opponentA = 0; opponentB = 2; }
-            else { opponentA = 2; opponentB = 0; }
-        } else {
-            if (score0 >= score1) { opponentA = 0; opponentB = 1; }
-            else { opponentA = 1; opponentB = 0; }
-        }
+        int opponentA = TerritoryUtils.otherPlayerA(myPlayerNumber);
+        int opponentB = TerritoryUtils.otherPlayerB(myPlayerNumber);
+        OpponentWeights.Weights weights = OpponentWeights.compute(
+                client != null ? client.getScore(opponentA) : 0,
+                client != null ? client.getScore(opponentB) : 0);
 
         while (!open.isEmpty()) {
             Node current = open.poll();
@@ -177,9 +169,9 @@ public class ColorAStarNavigator implements Navigator {
 
                 if (neighbor.closed) continue;
 
-                double weight = getColorWeight(nx * scale + scale / 2, ny * scale + scale / 2, opponentA, opponentB);
+                double weight = getColorWeight(nx * scale + scale / 2, ny * scale + scale / 2, opponentA, opponentB, weights);
                 double moveCost = baseCost[i] * weight;
-                
+
                 double newG = current.g + moveCost;
                 if (newG < neighbor.g) {
                     neighbor.g = newG;
@@ -200,10 +192,10 @@ public class ColorAStarNavigator implements Navigator {
             curr = curr.parent;
         }
         Collections.reverse(path);
-        
+
         path.set(0, start);
         path.set(path.size() - 1, end);
-        
+
         return path;
     }
 
@@ -211,11 +203,11 @@ public class ColorAStarNavigator implements Navigator {
         this.currentBotRadius = radius;
     }
 
-    private double getColorWeight(int px, int py, int opponentA, int opponentB) {
+    private double getColorWeight(int px, int py, int opponentA, int opponentB, OpponentWeights.Weights weights) {
         if (client == null) return 1.0;
-        
+
         // Treat center pixel wall as strict penalty
-        if (client.getBoard(px, py) == 0) return 1.0 + MAX_PATH_PENALTY; 
+        if (client.getBoard(px, py) == 0) return 1.0 + MAX_PATH_PENALTY;
 
         long totalMyVal = 0;
         long totalValA = 0;
@@ -228,23 +220,9 @@ public class ColorAStarNavigator implements Navigator {
                 int val = client.getBoard(px + dx, py + dy);
                 if (val == 0) continue; // ignore walls in the average
 
-                int r = (val >> 16) & 0xFF;
-                int g = (val >> 8) & 0xFF;
-                int b = val & 0xFF;
-
-                if (myPlayerNumber == 0) {
-                    totalMyVal += r;
-                    totalValA += (opponentA == 1) ? g : b;
-                    totalValB += (opponentB == 1) ? g : b;
-                } else if (myPlayerNumber == 1) {
-                    totalMyVal += g;
-                    totalValA += (opponentA == 0) ? r : b;
-                    totalValB += (opponentB == 0) ? r : b;
-                } else {
-                    totalMyVal += b;
-                    totalValA += (opponentA == 0) ? r : g;
-                    totalValB += (opponentB == 0) ? r : g;
-                }
+                totalMyVal += TerritoryUtils.myChannelValue(val, myPlayerNumber);
+                totalValA += TerritoryUtils.myChannelValue(val, opponentA);
+                totalValB += TerritoryUtils.myChannelValue(val, opponentB);
                 samples++;
             }
         }
@@ -255,13 +233,11 @@ public class ColorAStarNavigator implements Navigator {
         double avgValA = totalValA / (double) samples;
         double avgValB = totalValB / (double) samples;
 
-        double desirability = MY_COLOR_GAIN_WEIGHT * (255.0 - avgMyVal) +
-                              LEADER_COLOR_STRIKE_WEIGHT * avgValA +
-                              LOSER_COLOR_STRIKE_WEIGHT * avgValB;
+        double desirability = TerritoryUtils.cellPaintValue((int) avgMyVal, (int) avgValA, (int) avgValB, weights);
+        double maxDesirability = TerritoryUtils.OWN_GAIN_WEIGHT * 255.0
+                + Math.max(weights.weightA(), weights.weightB()) * 255.0;
 
-        double MAX_DESIRABILITY = MY_COLOR_GAIN_WEIGHT * 255.0 + LEADER_COLOR_STRIKE_WEIGHT * 255.0; 
-        
-        double penalty = MAX_PATH_PENALTY * (1.0 - (desirability / MAX_DESIRABILITY));
+        double penalty = MAX_PATH_PENALTY * (1.0 - (desirability / maxDesirability));
         return 1.0 + Math.max(0, penalty);
     }
 
@@ -278,17 +254,14 @@ public class ColorAStarNavigator implements Navigator {
     }
 
     @Override
-    public double[] getNextMoveDirection(Point currentPos, Point targetPos) {
+    public Vector2 getNextMoveDirection(GameState state, BotContext self, Point currentPos, Point targetPos) {
+        setBotRadius(self.paintRadius());
         List<Point> path = findPath(currentPos, targetPos);
-        if (path == null || path.size() < 2) return new double[]{0, 0};
+        if (path == null || path.size() < 2) return Vector2.ZERO;
 
         // Lookahead to smooth out the path and avoid micro-jitter drifting into walls
         int lookaheadIndex = Math.min(5, path.size() - 1);
         Point next = path.get(lookaheadIndex);
-        double dx = next.x - currentPos.x;
-        double dy = next.y - currentPos.y;
-        double len = Math.sqrt(dx * dx + dy * dy);
-        if (len == 0) return new double[]{0, 0};
-        return new double[]{dx / len, dy / len};
+        return Vector2.towards(currentPos, next).normalized();
     }
 }

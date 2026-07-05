@@ -2,7 +2,7 @@ package lezhor.htw.zebrakit.test;
 
 import java.awt.Point;
 import java.util.List;
-import lezhor.htw.zebrakit.nav.ThetaStarNavigator;
+import lezhor.htw.zebrakit.movement.nav.ThetaStarNavigator;
 
 public class TestThetaStar {
     public static void main(String[] args) {

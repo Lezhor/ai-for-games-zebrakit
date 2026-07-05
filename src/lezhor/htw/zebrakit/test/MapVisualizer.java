@@ -1,9 +1,8 @@
 package lezhor.htw.zebrakit.test;
 
 import lenz.htw.zebrakit.e;
-import lezhor.htw.zebrakit.nav.Navigator;
-import lezhor.htw.zebrakit.nav.ThetaStarNavigator;
-import lezhor.htw.zebrakit.nav.NavMeshNavigator;
+import lezhor.htw.zebrakit.movement.nav.Navigator;
+import lezhor.htw.zebrakit.movement.nav.ThetaStarNavigator;
 
 import javax.swing.*;
 import java.awt.*;
@@ -17,10 +16,7 @@ public class MapVisualizer extends JPanel {
     private static final int MAP_SIZE = 1024;
 
     private final BufferedImage mapImage;
-    private final Navigator thetaStarNavigator;
-    private final Navigator navMeshNavigator;
-
-    private Navigator currentNavigator;
+    private final Navigator navigator;
 
     private Point startPoint = null;
     private Point endPoint = null;
@@ -44,14 +40,9 @@ public class MapVisualizer extends JPanel {
             }
         }
 
-        System.out.println("Initializing navigators...");
-        thetaStarNavigator = new ThetaStarNavigator(8, 4); // 8px inflation, scaled down to 512x512
-        thetaStarNavigator.initialize(seed);
-
-        navMeshNavigator = new NavMeshNavigator();
-        navMeshNavigator.initialize(seed);
-
-        currentNavigator = thetaStarNavigator;
+        System.out.println("Initializing navigator...");
+        navigator = new ThetaStarNavigator(8, 4); // 8px inflation, scaled down to 512x512
+        navigator.initialize(seed);
         System.out.println("Initialization complete!");
 
         addMouseListener(new MouseAdapter() {
@@ -70,18 +61,13 @@ public class MapVisualizer extends JPanel {
     private void recalculatePath() {
         if (startPoint != null && endPoint != null) {
             long startTime = System.nanoTime();
-            currentPath = currentNavigator.findPath(startPoint, endPoint);
+            currentPath = navigator.findPath(startPoint, endPoint);
             long endTime = System.nanoTime();
             calculationTimeMs = (endTime - startTime) / 1000000;
         } else {
             currentPath = null;
         }
         repaint();
-    }
-
-    public void setNavigator(boolean useThetaStar) {
-        currentNavigator = useThetaStar ? thetaStarNavigator : navMeshNavigator;
-        recalculatePath();
     }
 
     @Override
@@ -119,8 +105,7 @@ public class MapVisualizer extends JPanel {
         // Draw info text
         g2.setColor(Color.MAGENTA);
         g2.setFont(new Font("SansSerif", Font.BOLD, 16));
-        String navName = (currentNavigator == thetaStarNavigator) ? "Theta* (Grid)" : "NavMesh (Stub)";
-        g2.drawString("Navigator: " + navName, 10, 20);
+        g2.drawString("Navigator: Theta* (Grid)", 10, 20);
         if (startPoint != null && endPoint != null) {
             if (currentPath != null) {
                 g2.drawString("Status: Path Found in " + calculationTimeMs + " ms", 10, 40);
@@ -142,21 +127,6 @@ public class MapVisualizer extends JPanel {
             MapVisualizer visualizer = new MapVisualizer(seed);
             frame.add(visualizer, BorderLayout.CENTER);
 
-            JPanel controlPanel = new JPanel();
-            JRadioButton thetaRadio = new JRadioButton("Theta* Navigator", true);
-            JRadioButton navMeshRadio = new JRadioButton("NavMesh Navigator", false);
-
-            ButtonGroup group = new ButtonGroup();
-            group.add(thetaRadio);
-            group.add(navMeshRadio);
-
-            thetaRadio.addActionListener(e -> visualizer.setNavigator(true));
-            navMeshRadio.addActionListener(e -> visualizer.setNavigator(false));
-
-            controlPanel.add(thetaRadio);
-            controlPanel.add(navMeshRadio);
-
-            frame.add(controlPanel, BorderLayout.NORTH);
             frame.pack();
             frame.setLocationRelativeTo(null);
             frame.setVisible(true);

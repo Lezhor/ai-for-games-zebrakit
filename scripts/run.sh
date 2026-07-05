@@ -1,27 +1,29 @@
 #!/bin/bash
 
 function print_help {
-    echo "Usage: $0 [options] <agentName>"
+    echo "Usage: $0 [options] <strategyName>"
     echo ""
     echo "Arguments:"
-    echo "  agentName       The name of the agent strategy to run (e.g., RandomAgent)"
+    echo "  strategyName    The strategy to run (e.g. TerritoryPaint). Bot name defaults to this if --name is omitted."
     echo ""
     echo "Options:"
-    echo "  --name <name>   The name of the bot to register with the server (default: myBot)"
+    echo "  --name <name>   The name of the bot to register with the server (default: the strategy name)"
     echo "  --host <host>   The server host (default: 127.0.0.1)"
     echo "  --port <port>   The server port (currently unused by java backend, default: 22135)"
+    echo "  --nav <name>    Override the movement/navigator this strategy uses (see --list-strategies for choices)"
     echo "  --help          Print this help message"
     echo ""
-    echo "Available Strategies:"
-    find src/lezhor/htw/zebrakit/agents -name "*.java" 2>/dev/null | sed 's|.*/||;s|\.java||' | while read agent; do
-        echo "  - $agent"
-    done
+    echo "Available strategies and navigators (asking the CLI directly, so this never drifts out of date):"
+    (cd "$DIR/.." && gradle run -q --args="--help")
 }
 
-BOT_NAME="myBot"
-HOST="127.0.0.1"
-PORT="22135"
-AGENT_NAME=""
+BOT_NAME=""
+HOST=""
+PORT=""
+NAV=""
+STRATEGY_NAME=""
+
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 
 while [[ $# -gt 0 ]]; do
   case $1 in
@@ -37,6 +39,10 @@ while [[ $# -gt 0 ]]; do
       PORT="$2"
       shift 2
       ;;
+    --nav)
+      NAV="$2"
+      shift 2
+      ;;
     --help)
       print_help
       exit 0
@@ -47,11 +53,11 @@ while [[ $# -gt 0 ]]; do
       exit 1
       ;;
     *)
-      if [ -z "$AGENT_NAME" ]; then
-        AGENT_NAME="$1"
+      if [ -z "$STRATEGY_NAME" ]; then
+        STRATEGY_NAME="$1"
         shift
       else
-        echo "Error: Multiple agent names provided ($AGENT_NAME and $1)"
+        echo "Error: Multiple strategy names provided ($STRATEGY_NAME and $1)"
         print_help
         exit 1
       fi
@@ -59,10 +65,19 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-if [ -z "$AGENT_NAME" ]; then
-    echo "Error: Agent name is required."
+if [ -z "$STRATEGY_NAME" ]; then
+    echo "Error: Strategy name is required."
     print_help
     exit 1
 fi
 
-gradle run -q -Pagent="$AGENT_NAME" --args="$BOT_NAME $HOST $PORT"
+# Build the args array; omit flags the user didn't pass so Main applies its own defaults
+# (in particular, bot name defaults to the strategy name when --name is omitted).
+ARGS=("$STRATEGY_NAME")
+if [ -n "$BOT_NAME" ]; then ARGS+=(--name "$BOT_NAME"); fi
+if [ -n "$HOST" ]; then ARGS+=(--host "$HOST"); fi
+if [ -n "$PORT" ]; then ARGS+=(--port "$PORT"); fi
+if [ -n "$NAV" ]; then ARGS+=(--nav "$NAV"); fi
+
+cd "$DIR/.." || exit
+gradle run -q --args="${ARGS[*]}"
