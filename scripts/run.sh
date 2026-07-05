@@ -13,8 +13,8 @@ function print_help {
     echo "  --nav <name>    Override the movement/navigator this strategy uses (see --list-strategies for choices)"
     echo "  --help          Print this help message"
     echo ""
-    echo "Available strategies and navigators (asking the CLI directly, so this never drifts out of date):"
-    (cd "$DIR/.." && gradle run -q --args="--help")
+    # Ask the CLI directly instead of guessing, so this listing can't drift out of date.
+    (cd "$DIR/.." && gradle run -q --args="--list")
 }
 
 BOT_NAME=""

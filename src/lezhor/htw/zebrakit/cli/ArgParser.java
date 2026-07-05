@@ -19,9 +19,21 @@ public final class ArgParser {
         return false;
     }
 
+    /** Just the strategy/navigator names, no usage line — for scripts (run.sh/match.sh) to embed in their own --help. */
+    public static boolean isListRequested(String[] args) {
+        for (String arg : args) {
+            if (arg.equals("--list")) return true;
+        }
+        return false;
+    }
+
     public static void printHelp() {
         System.out.println("Usage: <strategyName> [--name <botName>] [--host <host>] [--port <port>] [--nav <navName>]");
         System.out.println();
+        printAvailable();
+    }
+
+    public static void printAvailable() {
         System.out.println("Available strategies:");
         StrategyFactory.availableNames().forEach(n -> System.out.println("  - " + n));
         System.out.println();

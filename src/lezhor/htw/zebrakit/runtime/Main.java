@@ -17,6 +17,10 @@ public class Main {
             ArgParser.printHelp();
             return;
         }
+        if (ArgParser.isListRequested(args)) {
+            ArgParser.printAvailable();
+            return;
+        }
 
         RunConfig config = ArgParser.parse(args);
 
