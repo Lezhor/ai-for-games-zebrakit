@@ -3,13 +3,14 @@ package lezhor.htw.zebrakit.agents;
 import lenz.htw.zebrakit.PowerupType;
 import lenz.htw.zebrakit.Update;
 import lenz.htw.zebrakit.net.NetworkClient;
+import lezhor.htw.zebrakit.nav.ColorAStarNavigator;
 import lezhor.htw.zebrakit.nav.Navigator;
 import lezhor.htw.zebrakit.nav.ThetaStarNavigator;
 
 import java.awt.Point;
 import java.util.*;
 
-public class ConvolutionAgent {
+public class ColorAwareAgent {
 
     private static final int MAP_SIZE = 1024;
     private static final int GRID_SIZE = 64;
@@ -19,6 +20,9 @@ public class ConvolutionAgent {
 
     // Alphas for bot 0, 1, 2
     private static final double[] ALPHA = {0.01, 0.03, 0.06};
+
+    // Approximate radii for bot 0, 1, 2
+    private static final int[] BOT_RADII = {35, 20, 10};
 
     private static class CellUtility implements Comparable<CellUtility> {
         Point p;
@@ -36,14 +40,19 @@ public class ConvolutionAgent {
     }
 
     public static void main(String[] args) {
-        String name = args.length > 0 ? args[0] : "ConvolveAgent";
+        String name = args.length > 0 ? args[0] : "ColorAwareAgent";
         String host = args.length > 1 ? args[1] : "127.0.0.1";
-        NetworkClient client = new NetworkClient(host, name, "Yeay");
+        NetworkClient client = new NetworkClient(host, name, "A* Color Strike!");
 
         int myPlayerNumber = client.getMyPlayerNumber();
-        Navigator navigator = new ThetaStarNavigator(8, 2);
-        navigator.initialize(client);
-        System.out.println("Navigator initialized");
+
+        Navigator geomNavigator = new ThetaStarNavigator(8, 2);
+        geomNavigator.initialize(client);
+
+        Navigator colorNavigator = new ColorAStarNavigator(8, 2);
+        colorNavigator.initialize(client);
+
+        System.out.println("Navigators initialized");
 
         Map<Point, PowerupType> activePowerups = new HashMap<>();
         Point[] botPositions = new Point[3];
@@ -91,8 +100,8 @@ public class ConvolutionAgent {
                 }
 
                 if (needsTarget) {
-                    // Try to get a powerup first
-                    Point powerupTarget = getBestPowerup(bot, botPositions, activePowerups, navigator);
+                    // Try to get a powerup first using geometric navigator
+                    Point powerupTarget = getBestPowerup(bot, botPositions, activePowerups, geomNavigator);
                     if (powerupTarget != null) {
                         botTargets[bot] = powerupTarget;
                         targetStartTimes[bot] = System.currentTimeMillis();
@@ -103,14 +112,22 @@ public class ConvolutionAgent {
                             influenceMapUpdatedThisFrame = true;
                         }
 
-                        Point newTarget = findBestTargetFromInfluence(bot, botPositions, botTargets, influenceMap, client, navigator, rand);
+                        Point newTarget = findBestTargetFromInfluence(bot, botPositions, botTargets, influenceMap, client, geomNavigator, rand);
                         botTargets[bot] = newTarget;
                         targetStartTimes[bot] = System.currentTimeMillis();
                     }
                 }
 
                 if (botTargets[bot] != null) {
-                    double[] dir = navigator.getNextMoveDirection(botPositions[bot], botTargets[bot]);
+                    // Update bot radius for color sampling
+                    if (colorNavigator instanceof ColorAStarNavigator) {
+                        ((ColorAStarNavigator) colorNavigator).setBotRadius(BOT_RADII[bot]);
+                    }
+
+                    // We use the color-aware navigator to physically move to the target, UNLESS it's a powerup (where we just want the fastest route)
+                    Navigator activeNavigator = isPowerupTarget(botTargets[bot], activePowerups) ? geomNavigator : colorNavigator;
+
+                    double[] dir = activeNavigator.getNextMoveDirection(botPositions[bot], botTargets[bot]);
                     if (dir[0] == 0.0 && dir[1] == 0.0 && !isNear(botPositions[bot], botTargets[bot])) {
                         // Unreachable
                         botTargets[bot] = null;
@@ -129,6 +146,15 @@ public class ConvolutionAgent {
                 e.printStackTrace();
             }
         }
+    }
+
+    private static boolean isPowerupTarget(Point target, Map<Point, PowerupType> activePowerups) {
+        for (Point p : activePowerups.keySet()) {
+            if (p.distance(target) < 15) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private static void removeNearestPowerup(Map<Point, PowerupType> activePowerups, Point loc, double radius) {
@@ -165,7 +191,7 @@ public class ConvolutionAgent {
         return myVal > 220;
     }
 
-    private static Point getBestPowerup(int bot, Point[] botPositions, Map<Point, PowerupType> activePowerups, Navigator navigator) {
+    private static Point getBestPowerup(int bot, Point[] botPositions, Map<Point, PowerupType> activePowerups, Navigator geomNavigator) {
         Point bestPowerup = null;
         double minPathDist = Double.MAX_VALUE;
 
@@ -176,13 +202,13 @@ public class ConvolutionAgent {
             // Rough distance filter - increased to 500 for more frequent powerup targeting
             if (p.distance(botPositions[bot]) > 500) continue;
 
-            double pathDist = navigator.getPathDistance(botPositions[bot], p);
+            double pathDist = geomNavigator.getPathDistance(botPositions[bot], p);
             if (pathDist < minPathDist) {
                 // Check if another bot is closer
                 boolean someoneCloser = false;
                 for (int other = 0; other < 3; other++) {
                     if (other == bot) continue;
-                    if (navigator.getPathDistance(botPositions[other], p) < pathDist) {
+                    if (geomNavigator.getPathDistance(botPositions[other], p) < pathDist) {
                         someoneCloser = true;
                         break;
                     }
@@ -278,7 +304,7 @@ public class ConvolutionAgent {
         }
     }
 
-    private static Point findBestTargetFromInfluence(int bot, Point[] botPositions, Point[] botTargets, double[][] influenceMap, NetworkClient client, Navigator navigator, Random rand) {
+    private static Point findBestTargetFromInfluence(int bot, Point[] botPositions, Point[] botTargets, double[][] influenceMap, NetworkClient client, Navigator geomNavigator, Random rand) {
         List<CellUtility> candidates = new ArrayList<>();
         Point myPos = botPositions[bot];
         double myGx = myPos.x / (double)CELL_PIXELS;
@@ -330,11 +356,11 @@ public class ConvolutionAgent {
 
         Collections.sort(candidates);
 
-        // Try top 10 reachable targets
+        // Try top 10 reachable targets using geometric navigator
         int limit = Math.min(10, candidates.size());
         for (int i = 0; i < limit; i++) {
             Point candidatePoint = candidates.get(i).p;
-            if (navigator.getPathDistance(myPos, candidatePoint) < Double.MAX_VALUE) {
+            if (geomNavigator.getPathDistance(myPos, candidatePoint) < Double.MAX_VALUE) {
                 return candidatePoint;
             }
         }
