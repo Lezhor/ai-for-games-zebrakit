@@ -5,6 +5,7 @@ import lezhor.htw.zebrakit.core.BotRoles;
 import lezhor.htw.zebrakit.core.GameState;
 import lezhor.htw.zebrakit.core.Vector2;
 import lezhor.htw.zebrakit.movement.nav.Navigator;
+import lezhor.htw.zebrakit.strategy.bresenham.BotDistanceEvaluator;
 import lezhor.htw.zebrakit.strategy.bresenham.BresenhamConfig;
 import lezhor.htw.zebrakit.strategy.bresenham.LeaderWeighting;
 import lezhor.htw.zebrakit.strategy.bresenham.PaintValueEvaluator;
@@ -56,7 +57,7 @@ public class BresenhamStrategy implements Strategy {
         this.powerupNav = powerupNav;
         this.powerupOverride = new PowerupOverride(powerupNav, config);
         this.wallField = new WallField(config.wallGridScale(), config.wallRadiusPx());
-        this.evaluators = List.of(new PaintValueEvaluator());
+        this.evaluators = List.of(new PaintValueEvaluator(), new BotDistanceEvaluator());
         this.rayScanner = new RayScanner(config, evaluators, wallField);
         Arrays.fill(committed, Vector2.ZERO);
     }
