@@ -52,20 +52,41 @@ public class InfluenceMap {
         walkable = new boolean[gridSize][gridSize];
         for (int gx = 0; gx < gridSize; gx++) {
             for (int gy = 0; gy < gridSize; gy++) {
-                walkable[gx][gy] = state.isWalkable(cellCenter(gx), cellCenter(gy));
+                walkable[gx][gy] = isCellWalkable(state, gx, gy);
             }
         }
     }
 
-    /** Rebuild both layers from the current board. Call once per tick with weights computed once per tick. */
+    /**
+     * A coarse cell is walkable only if its center AND its 4 quadrant-offset
+     * points are all walkable — a single center sample can miss a thin wall
+     * that doesn't happen to cross it.
+     */
+    private boolean isCellWalkable(GameState state, int gx, int gy) {
+        int cx = cellCenter(gx);
+        int cy = cellCenter(gy);
+        int offset = cellPixels / 4;
+        return state.isWalkable(cx, cy)
+                && state.isWalkable(cx - offset, cy - offset)
+                && state.isWalkable(cx + offset, cy - offset)
+                && state.isWalkable(cx - offset, cy + offset)
+                && state.isWalkable(cx + offset, cy + offset);
+    }
+
+    /** Convenience overload using the shared default {@link TerritoryUtils#OWN_GAIN_WEIGHT}. */
     public void update(GameState state, int myPlayerNumber, OpponentWeights.Weights weights) {
+        update(state, myPlayerNumber, weights, TerritoryUtils.OWN_GAIN_WEIGHT);
+    }
+
+    /** Rebuild both layers from the current board. Call once per tick with weights computed once per tick. */
+    public void update(GameState state, int myPlayerNumber, OpponentWeights.Weights weights, double ownGainWeight) {
         initWalkable(state);
 
         double[][] rawValue = new double[gridSize][gridSize];
         for (int gx = 0; gx < gridSize; gx++) {
             for (int gy = 0; gy < gridSize; gy++) {
                 if (!walkable[gx][gy]) continue;
-                rawValue[gx][gy] = TerritoryUtils.cellPaintValue(state, cellCenter(gx), cellCenter(gy), myPlayerNumber, weights);
+                rawValue[gx][gy] = TerritoryUtils.cellPaintValue(state, cellCenter(gx), cellCenter(gy), myPlayerNumber, weights, ownGainWeight);
             }
         }
         diffuseInto(rawValue, value);

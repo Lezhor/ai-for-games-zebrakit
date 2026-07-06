@@ -32,8 +32,28 @@ public class LocalPaintField {
      * Unit direction (or {@link Vector2#ZERO}) toward the highest-value nearby
      * walkable space — the diffused-value centroid of the window relative to
      * {@code center}. Uniform surroundings → ~ZERO (no local preference).
+     *
+     * @param minRadiusPx cells closer than this to {@code center} are ramped down toward zero
+     *                     weight (a cell nearly under the bot barely offsets the centroid, so
+     *                     its value noise can flip the resulting direction's sign tick-to-tick) —
+     *                     linearly from 0 at the center to full weight at {@code minRadiusPx}, so
+     *                     there's no hard-edged ring that the bot can end up orbiting.
+     *                     {@code <= 0} disables the ramp (all cells full weight).
+     * @param ownGainWeight how much our own channel's headroom is weighted vs. opponent strip —
+     *                      see {@link TerritoryUtils#cellPaintValue}; higher biases hard toward
+     *                      enemy-owned cells over neutral white ones.
+     * @param previousDirection the direction chosen last tick (or {@link Vector2#ZERO} if none yet).
+     *                          Cells roughly in this same direction from the bot get a weight bonus,
+     *                          so a temporarily lower-value-but-consistent direction can beat a
+     *                          marginally higher-value one on the opposite side — without this, the
+     *                          centroid can keep re-picking whichever side of an already-painted
+     *                          patch still has the most remaining value, tracing its rim in a circle.
+     * @param persistenceStrength how strong that directional-consistency bonus is (0 disables it);
+     *                            a cell exactly in {@code previousDirection} gets {@code (1 + persistenceStrength)}×
+     *                            weight, tapering to 1× (no bonus) for a cell perpendicular or behind.
      */
-    public Vector2 bestDirection(GameState state, Point center, int myPlayerNumber, OpponentWeights.Weights weights) {
+    public Vector2 bestDirection(GameState state, Point center, int myPlayerNumber, OpponentWeights.Weights weights,
+                                  double minRadiusPx, double ownGainWeight, Vector2 previousDirection, double persistenceStrength) {
         int size = 2 * windowRadiusCells + 1;
         double[][] a = new double[size][size];
         boolean[][] walkable = new boolean[size][size];
@@ -44,7 +64,7 @@ public class LocalPaintField {
                 int wy = center.y + (iy - windowRadiusCells) * cellPixels;
                 boolean ok = state.isWalkable(wx, wy);
                 walkable[ix][iy] = ok;
-                a[ix][iy] = ok ? TerritoryUtils.cellPaintValue(state, wx, wy, myPlayerNumber, weights) : 0.0;
+                a[ix][iy] = ok ? TerritoryUtils.cellPaintValue(state, wx, wy, myPlayerNumber, weights, ownGainWeight) : 0.0;
             }
         }
 
@@ -66,15 +86,29 @@ public class LocalPaintField {
             double[][] tmp = a; a = b; b = tmp;
         }
 
+        boolean hasPersistence = persistenceStrength > 0 && !previousDirection.isZero();
+        Vector2 prevUnit = hasPersistence ? previousDirection.normalized() : Vector2.ZERO;
+
         // Value-weighted centroid direction relative to the center cell.
         double sumX = 0, sumY = 0, sumW = 0;
         for (int ix = 0; ix < size; ix++) {
             for (int iy = 0; iy < size; iy++) {
                 if (!walkable[ix][iy]) continue;
-                double w = a[ix][iy];
+                double dx = ix - windowRadiusCells;
+                double dy = iy - windowRadiusCells;
+                double dist = Math.hypot(dx, dy);
+                double radialWeight = minRadiusPx > 0
+                        ? Math.min(1.0, (dist * cellPixels) / minRadiusPx)
+                        : 1.0;
+                double persistenceBonus = 1.0;
+                if (hasPersistence && dist > 0) {
+                    double cosSim = (dx * prevUnit.x() + dy * prevUnit.y()) / dist;
+                    persistenceBonus = 1.0 + persistenceStrength * Math.max(0, cosSim);
+                }
+                double w = a[ix][iy] * radialWeight * persistenceBonus;
                 if (w <= 0) continue;
-                sumX += w * (ix - windowRadiusCells);
-                sumY += w * (iy - windowRadiusCells);
+                sumX += w * dx;
+                sumY += w * dy;
                 sumW += w;
             }
         }

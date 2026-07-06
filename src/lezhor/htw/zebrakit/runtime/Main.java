@@ -27,7 +27,8 @@ public class Main {
         NetworkClient client = new NetworkClient(config.host(), config.botName(), Defaults.WIN_MESSAGE);
         GameState state = new GameState(client);
         BotContext[] bots = BotRoles.buildContexts(client);
-        Strategy strategy = StrategyFactory.create(config.strategyName(), client, config.navOverride(), config.matchLengthSeconds());
+        Strategy strategy = StrategyFactory.create(config.strategyName(), client, config.navOverride(),
+                config.matchLengthSeconds(), config.strategyConfigPath());
 
         new GameLoop(client, state, bots, strategy, 10).run();
     }

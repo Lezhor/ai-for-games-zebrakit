@@ -28,7 +28,7 @@ public final class ArgParser {
     }
 
     public static void printHelp() {
-        System.out.println("Usage: <strategyName> [--name <botName>] [--host <host>] [--port <port>] [--nav <navName>] [--time <seconds>]");
+        System.out.println("Usage: <strategyName> [--name <botName>] [--host <host>] [--port <port>] [--nav <navName>] [--time <seconds>] [--config <path>]");
         System.out.println();
         printAvailable();
     }
@@ -44,7 +44,7 @@ public final class ArgParser {
     public static RunConfig parse(String[] args) {
         if (args.length == 0) {
             throw new IllegalArgumentException(
-                    "Usage: <strategyName> [--name <botName>] [--host <host>] [--port <port>] [--nav <navName>] [--time <seconds>]");
+                    "Usage: <strategyName> [--name <botName>] [--host <host>] [--port <port>] [--nav <navName>] [--time <seconds>] [--config <path>]");
         }
 
         String strategyName = args[0];
@@ -65,8 +65,9 @@ public final class ArgParser {
         String port = flags.getOrDefault("port", Defaults.PORT);
         String navOverride = flags.get("nav");
         int matchLengthSeconds = parseIntOrDefault(flags.get("time"), Defaults.MATCH_LENGTH_SECONDS);
+        String strategyConfigPath = flags.get("config");
 
-        return new RunConfig(strategyName, botName, host, port, navOverride, matchLengthSeconds);
+        return new RunConfig(strategyName, botName, host, port, navOverride, matchLengthSeconds, strategyConfigPath);
     }
 
     private static int parseIntOrDefault(String value, int fallback) {

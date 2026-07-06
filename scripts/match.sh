@@ -13,6 +13,8 @@ function print_help {
     echo "  --nav <nav1[,nav2,nav3]>  Override the navigator each strategy uses. Same fill-forward rule as strategies:"
     echo "                            one name applies to all three, or give up to three comma-separated."
     echo "  --time <secs>             Assumed match length for time-aware strategies (default: 60)"
+    echo "  --config <path1[,path2,path3]>  Path to a strategy config.ini (only strategies that support one use it)."
+    echo "                            Same fill-forward rule as --nav: one path applies to all three, or give up to three comma-separated."
     echo "  --help                    Print this help message"
     echo ""
     # Ask the CLI directly instead of guessing, so this listing can't drift out of date.
@@ -23,6 +25,7 @@ HOST="127.0.0.1"
 PORT="22135"
 NAV=""
 TIME=""
+CONFIG=""
 STRATEGIES=()
 
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
@@ -43,6 +46,10 @@ while [[ $# -gt 0 ]]; do
       ;;
     --time)
       TIME="$2"
+      shift 2
+      ;;
+    --config)
+      CONFIG="$2"
       shift 2
       ;;
     --help)
@@ -78,6 +85,12 @@ NAV1="${NAVS[0]}"
 NAV2="${NAVS[1]:-$NAV1}"
 NAV3="${NAVS[2]:-$NAV2}"
 
+# Extrapolate config paths the same way, from a comma-separated --config value (if given at all)
+IFS=',' read -r -a CONFIGS <<< "$CONFIG"
+CONFIG1="${CONFIGS[0]}"
+CONFIG2="${CONFIGS[1]:-$CONFIG1}"
+CONFIG3="${CONFIGS[2]:-$CONFIG2}"
+
 # Dynamic naming: lowercasing the strategy name (bot name otherwise defaults to it as-is)
 function get_bot_name {
     local bot_num=$1
@@ -101,13 +114,17 @@ NAV3_ARGS=(); if [ -n "$NAV3" ]; then NAV3_ARGS=(--nav "$NAV3"); fi
 # One match length applies to all three players.
 TIME_ARGS=(); if [ -n "$TIME" ]; then TIME_ARGS=(--time "$TIME"); fi
 
-"$DIR/run.sh" --name "$NAME1" --host "$HOST" --port "$PORT" "${NAV1_ARGS[@]}" "${TIME_ARGS[@]}" "$STRATEGY1" &
+CONFIG1_ARGS=(); if [ -n "$CONFIG1" ]; then CONFIG1_ARGS=(--config "$CONFIG1"); fi
+CONFIG2_ARGS=(); if [ -n "$CONFIG2" ]; then CONFIG2_ARGS=(--config "$CONFIG2"); fi
+CONFIG3_ARGS=(); if [ -n "$CONFIG3" ]; then CONFIG3_ARGS=(--config "$CONFIG3"); fi
+
+"$DIR/run.sh" --name "$NAME1" --host "$HOST" --port "$PORT" "${NAV1_ARGS[@]}" "${TIME_ARGS[@]}" "${CONFIG1_ARGS[@]}" "$STRATEGY1" &
 PID1=$!
 
-"$DIR/run.sh" --name "$NAME2" --host "$HOST" --port "$PORT" "${NAV2_ARGS[@]}" "${TIME_ARGS[@]}" "$STRATEGY2" &
+"$DIR/run.sh" --name "$NAME2" --host "$HOST" --port "$PORT" "${NAV2_ARGS[@]}" "${TIME_ARGS[@]}" "${CONFIG2_ARGS[@]}" "$STRATEGY2" &
 PID2=$!
 
-"$DIR/run.sh" --name "$NAME3" --host "$HOST" --port "$PORT" "${NAV3_ARGS[@]}" "${TIME_ARGS[@]}" "$STRATEGY3" &
+"$DIR/run.sh" --name "$NAME3" --host "$HOST" --port "$PORT" "${NAV3_ARGS[@]}" "${TIME_ARGS[@]}" "${CONFIG3_ARGS[@]}" "$STRATEGY3" &
 PID3=$!
 
 echo "Clients launched. Waiting for them to finish..."

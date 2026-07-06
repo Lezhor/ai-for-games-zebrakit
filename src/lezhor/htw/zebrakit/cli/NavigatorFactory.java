@@ -15,9 +15,10 @@ public final class NavigatorFactory {
     }
 
     // scale=4 → pathfind on a 256x256 grid; low-res pathfinding is fine for this game and much cheaper.
+    // inflation=12px keeps paths off walls; reactive wall-avoidance steering adds the rest of the margin.
     private static final Map<String, Supplier<Navigator>> REGISTRY = Map.of(
-            "Theta", () -> new ThetaStarNavigator(8, 4),
-            "ColorAStar", () -> new ColorAStarNavigator(8, 4)
+            "Theta", () -> new ThetaStarNavigator(12, 4),
+            "ColorAStar", () -> new ColorAStarNavigator(12, 4)
     );
 
     public static Set<String> availableNames() {

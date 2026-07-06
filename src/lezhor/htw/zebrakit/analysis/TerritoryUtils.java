@@ -50,15 +50,24 @@ public final class TerritoryUtils {
 
     /**
      * The scoring value of painting one cell our color: our own channel's
-     * headroom (0-255, weighted by {@link #OWN_GAIN_WEIGHT} to prioritize it)
+     * headroom (0-255, weighted by {@code ownGainWeight} to prioritize it)
      * PLUS how much we'd strip from both opponents' channels, per
      * {@link OpponentWeights} (so a clearly-leading opponent is targeted
      * harder). This is why fully white/unclaimed cells (255 in every
      * channel) are valuable even though they give no direct gain to us —
-     * painting them still strips full value from both opponents.
+     * painting them still strips full value from both opponents. Since the
+     * gain term is zero on an already-white cell (our channel is already
+     * maxed there) and largest on a fully enemy-owned cell, {@code ownGainWeight}
+     * is the knob for how much more attractive enemy territory is than white.
      */
+    public static double cellPaintValue(int myVal, int otherAVal, int otherBVal, OpponentWeights.Weights weights,
+                                         double ownGainWeight) {
+        return ownGainWeight * (255 - myVal) + weights.weightA() * otherAVal + weights.weightB() * otherBVal;
+    }
+
+    /** Convenience overload using the shared default {@link #OWN_GAIN_WEIGHT}. */
     public static double cellPaintValue(int myVal, int otherAVal, int otherBVal, OpponentWeights.Weights weights) {
-        return OWN_GAIN_WEIGHT * (255 - myVal) + weights.weightA() * otherAVal + weights.weightB() * otherBVal;
+        return cellPaintValue(myVal, otherAVal, otherBVal, weights, OWN_GAIN_WEIGHT);
     }
 
     /**
@@ -68,14 +77,20 @@ public final class TerritoryUtils {
      * Returns 0 for walls. {@code weights} must have been computed with this same
      * {@code myPlayerNumber} (weightA ↔ {@link #otherPlayerA}, weightB ↔ {@link #otherPlayerB}).
      */
-    public static double cellPaintValue(GameState state, int x, int y, int myPlayerNumber, OpponentWeights.Weights weights) {
+    public static double cellPaintValue(GameState state, int x, int y, int myPlayerNumber,
+                                         OpponentWeights.Weights weights, double ownGainWeight) {
         int val = state.getBoard(x, y);
         if (val == 0) return 0;
         return cellPaintValue(
                 myChannelValue(val, myPlayerNumber),
                 myChannelValue(val, otherPlayerA(myPlayerNumber)),
                 myChannelValue(val, otherPlayerB(myPlayerNumber)),
-                weights);
+                weights, ownGainWeight);
+    }
+
+    /** Convenience overload using the shared default {@link #OWN_GAIN_WEIGHT}. */
+    public static double cellPaintValue(GameState state, int x, int y, int myPlayerNumber, OpponentWeights.Weights weights) {
+        return cellPaintValue(state, x, y, myPlayerNumber, weights, OWN_GAIN_WEIGHT);
     }
 
     /** Convenience overload using a wide default σ — for standalone callers with no live match progress. */
