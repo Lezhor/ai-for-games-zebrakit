@@ -141,9 +141,13 @@ public class ColorAStarNavigator implements Navigator {
 
         int opponentA = TerritoryUtils.otherPlayerA(myPlayerNumber);
         int opponentB = TerritoryUtils.otherPlayerB(myPlayerNumber);
+        // Pathfinding cost uses a wide default σ — it has no live match-progress signal; the
+        // strategy's influence map is where the time-shrinking σ actually drives targeting.
         OpponentWeights.Weights weights = OpponentWeights.compute(
+                client != null ? client.getScore(myPlayerNumber) : 0,
                 client != null ? client.getScore(opponentA) : 0,
-                client != null ? client.getScore(opponentB) : 0);
+                client != null ? client.getScore(opponentB) : 0,
+                OpponentWeights.DEFAULT_SIGMA);
 
         while (!open.isEmpty()) {
             Node current = open.poll();

@@ -11,6 +11,7 @@ function print_help {
     echo "  --host <host>   The server host (default: 127.0.0.1)"
     echo "  --port <port>   The server port (currently unused by java backend, default: 22135)"
     echo "  --nav <name>    Override the movement/navigator this strategy uses (see --list-strategies for choices)"
+    echo "  --time <secs>   Assumed match length for time-aware strategies (default: 60)"
     echo "  --help          Print this help message"
     echo ""
     # Ask the CLI directly instead of guessing, so this listing can't drift out of date.
@@ -21,6 +22,7 @@ BOT_NAME=""
 HOST=""
 PORT=""
 NAV=""
+TIME=""
 STRATEGY_NAME=""
 
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
@@ -41,6 +43,10 @@ while [[ $# -gt 0 ]]; do
       ;;
     --nav)
       NAV="$2"
+      shift 2
+      ;;
+    --time)
+      TIME="$2"
       shift 2
       ;;
     --help)
@@ -78,6 +84,7 @@ if [ -n "$BOT_NAME" ]; then ARGS+=(--name "$BOT_NAME"); fi
 if [ -n "$HOST" ]; then ARGS+=(--host "$HOST"); fi
 if [ -n "$PORT" ]; then ARGS+=(--port "$PORT"); fi
 if [ -n "$NAV" ]; then ARGS+=(--nav "$NAV"); fi
+if [ -n "$TIME" ]; then ARGS+=(--time "$TIME"); fi
 
 cd "$DIR/.." || exit
 gradle run -q --args="${ARGS[*]}"

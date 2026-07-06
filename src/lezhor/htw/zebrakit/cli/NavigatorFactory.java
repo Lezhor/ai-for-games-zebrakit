@@ -14,9 +14,10 @@ public final class NavigatorFactory {
     private NavigatorFactory() {
     }
 
+    // scale=4 → pathfind on a 256x256 grid; low-res pathfinding is fine for this game and much cheaper.
     private static final Map<String, Supplier<Navigator>> REGISTRY = Map.of(
-            "Theta", () -> new ThetaStarNavigator(8, 2),
-            "ColorAStar", () -> new ColorAStarNavigator(8, 2)
+            "Theta", () -> new ThetaStarNavigator(8, 4),
+            "ColorAStar", () -> new ColorAStarNavigator(8, 4)
     );
 
     public static Set<String> availableNames() {

@@ -61,15 +61,38 @@ public final class TerritoryUtils {
         return OWN_GAIN_WEIGHT * (255 - myVal) + weights.weightA() * otherAVal + weights.weightB() * otherBVal;
     }
 
-    /** Convenience overload: reads the board cell and both opponents' live scores from `state`. Returns 0 for walls. */
-    public static double cellPaintValue(GameState state, int x, int y, int myPlayerNumber) {
+    /**
+     * Reads the board cell and scores its paint value using <em>precomputed</em>
+     * {@link OpponentWeights.Weights} (computed once per tick by the caller — see
+     * {@link #computeWeights}), so the per-cell hot path never recomputes them.
+     * Returns 0 for walls. {@code weights} must have been computed with this same
+     * {@code myPlayerNumber} (weightA ↔ {@link #otherPlayerA}, weightB ↔ {@link #otherPlayerB}).
+     */
+    public static double cellPaintValue(GameState state, int x, int y, int myPlayerNumber, OpponentWeights.Weights weights) {
         int val = state.getBoard(x, y);
         if (val == 0) return 0;
+        return cellPaintValue(
+                myChannelValue(val, myPlayerNumber),
+                myChannelValue(val, otherPlayerA(myPlayerNumber)),
+                myChannelValue(val, otherPlayerB(myPlayerNumber)),
+                weights);
+    }
 
-        int otherA = otherPlayerA(myPlayerNumber);
-        int otherB = otherPlayerB(myPlayerNumber);
-        OpponentWeights.Weights weights = OpponentWeights.compute(state.getScore(otherA), state.getScore(otherB));
+    /** Convenience overload using a wide default σ — for standalone callers with no live match progress. */
+    public static double cellPaintValue(GameState state, int x, int y, int myPlayerNumber) {
+        return cellPaintValue(state, x, y, myPlayerNumber, computeWeights(state, myPlayerNumber, OpponentWeights.DEFAULT_SIGMA));
+    }
 
-        return cellPaintValue(myChannelValue(val, myPlayerNumber), myChannelValue(val, otherA), myChannelValue(val, otherB), weights);
+    /**
+     * Computes the opponent weights for {@code myPlayerNumber} from the two other
+     * players' live scores, in the positional order {@link #otherPlayerA}/{@link #otherPlayerB}.
+     * Call once per tick and pass the result into {@link #cellPaintValue}.
+     */
+    public static OpponentWeights.Weights computeWeights(GameState state, int myPlayerNumber, double sigma) {
+        return OpponentWeights.compute(
+                state.getScore(myPlayerNumber),
+                state.getScore(otherPlayerA(myPlayerNumber)),
+                state.getScore(otherPlayerB(myPlayerNumber)),
+                sigma);
     }
 }

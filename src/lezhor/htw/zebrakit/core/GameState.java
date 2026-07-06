@@ -5,26 +5,33 @@ import lenz.htw.zebrakit.Update;
 import lenz.htw.zebrakit.net.NetworkClient;
 
 import java.awt.Point;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 
 /**
  * Per-tick facade over {@link NetworkClient}: drains queued updates and keeps
- * this player's bot positions and the board's active powerups up to date, so
- * strategies don't each reimplement the same polling/bookkeeping loop.
+ * every player's bot positions and the board's active powerups up to date, so
+ * strategies don't each reimplement the same polling/bookkeeping loop. The
+ * update stream carries all three players' bots; we keep the opponents' too
+ * (for crowding-avoidance and powerup races), not just our own.
  */
 public class GameState {
     private static final double POWERUP_PICKUP_RADIUS = 15.0;
+    public static final int PLAYER_COUNT = 3;
 
     private final NetworkClient client;
     private final int myPlayerNumber;
-    private final Point[] botPositions = new Point[BotRoles.BOT_COUNT];
+    private final Point[][] botPositions = new Point[PLAYER_COUNT][BotRoles.BOT_COUNT];
     private final PowerupTracker powerupTracker = new PowerupTracker();
 
     public GameState(NetworkClient client) {
         this.client = client;
         this.myPlayerNumber = client.getMyPlayerNumber();
-        for (int i = 0; i < botPositions.length; i++) {
-            botPositions[i] = new Point(512, 512); // fallback until first update
+        for (int p = 0; p < PLAYER_COUNT; p++) {
+            for (int b = 0; b < BotRoles.BOT_COUNT; b++) {
+                botPositions[p][b] = new Point(512, 512); // fallback until first update
+            }
         }
     }
 
@@ -34,8 +41,9 @@ public class GameState {
         while ((update = client.pullNextUpdate()) != null) {
             PowerupType type = update.type;
             if (type == null) {
-                if (update.player == myPlayerNumber && update.bot >= 0 && update.bot < botPositions.length) {
-                    botPositions[update.bot].setLocation(update.x, update.y);
+                if (update.player >= 0 && update.player < PLAYER_COUNT
+                        && update.bot >= 0 && update.bot < BotRoles.BOT_COUNT) {
+                    botPositions[update.player][update.bot].setLocation(update.x, update.y);
                 }
             } else if (update.player == -1 && update.bot == -1) {
                 powerupTracker.onSpawn(new Point(update.x, update.y), type);
@@ -49,8 +57,26 @@ public class GameState {
         return myPlayerNumber;
     }
 
+    /** Position of one of our own bots (defensive copy). */
     public Point botPosition(int botIndex) {
-        return new Point(botPositions[botIndex]);
+        return new Point(botPositions[myPlayerNumber][botIndex]);
+    }
+
+    /** Position of any player's bot (defensive copy). */
+    public Point botPosition(int player, int botIndex) {
+        return new Point(botPositions[player][botIndex]);
+    }
+
+    /** Every opponent bot's position (all players except ours), as fresh copies. */
+    public List<Point> opponentBotPositions() {
+        List<Point> result = new ArrayList<>((PLAYER_COUNT - 1) * BotRoles.BOT_COUNT);
+        for (int p = 0; p < PLAYER_COUNT; p++) {
+            if (p == myPlayerNumber) continue;
+            for (int b = 0; b < BotRoles.BOT_COUNT; b++) {
+                result.add(new Point(botPositions[p][b]));
+            }
+        }
+        return result;
     }
 
     public Map<Point, PowerupType> activePowerups() {

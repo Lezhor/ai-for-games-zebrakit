@@ -15,22 +15,27 @@ public final class StrategyFactory {
 
     @FunctionalInterface
     private interface Builder {
-        Strategy build(NetworkClient client, String navOverride);
+        Strategy build(NetworkClient client, String navOverride, int matchLengthSeconds);
     }
 
     private static final Map<String, Builder> REGISTRY = Map.of(
-            "Idle", (client, navOverride) -> new IdleStrategy(),
-            "Dummy", (client, navOverride) -> new DummyStrategy(),
-            "RandomWalk", (client, navOverride) -> new RandomWalkStrategy(),
-            "RandomTarget", (client, navOverride) ->
+            "Idle", (client, navOverride, matchLength) -> new IdleStrategy(),
+            "Dummy", (client, navOverride, matchLength) -> new DummyStrategy(),
+            "RandomWalk", (client, navOverride, matchLength) -> new RandomWalkStrategy(),
+            "RandomTarget", (client, navOverride, matchLength) ->
                     new RandomTargetStrategy(NavigatorFactory.createInitialized(navOverride != null ? navOverride : "Theta", client)),
-            "PowerupHunt", (client, navOverride) ->
+            "PowerupHunt", (client, navOverride, matchLength) ->
                     new PowerupHuntStrategy(NavigatorFactory.createInitialized(navOverride != null ? navOverride : "Theta", client)),
-            "TerritoryPaint", (client, navOverride) -> {
+            "TerritoryPaint", (client, navOverride, matchLength) -> {
                 Navigator powerupMovement = NavigatorFactory.createInitialized("Theta", client);
                 MovementProvider territoryMovement =
                         NavigatorFactory.createInitialized(navOverride != null ? navOverride : "ColorAStar", client);
                 return new TerritoryPaintStrategy(territoryMovement, powerupMovement);
+            },
+            "TerritoryDiffusion", (client, navOverride, matchLength) -> {
+                Navigator territoryNav = NavigatorFactory.createInitialized(navOverride != null ? navOverride : "ColorAStar", client);
+                Navigator powerupNav = NavigatorFactory.createInitialized("Theta", client);
+                return new TerritoryDiffusionStrategy(territoryNav, powerupNav, matchLength);
             }
     );
 
@@ -38,11 +43,11 @@ public final class StrategyFactory {
         return REGISTRY.keySet();
     }
 
-    public static Strategy create(String name, NetworkClient client, String navOverride) {
+    public static Strategy create(String name, NetworkClient client, String navOverride, int matchLengthSeconds) {
         Builder builder = REGISTRY.get(name);
         if (builder == null) {
             throw new IllegalArgumentException("Unknown strategy: " + name + ". Available: " + availableNames());
         }
-        return builder.build(client, navOverride);
+        return builder.build(client, navOverride, matchLengthSeconds);
     }
 }

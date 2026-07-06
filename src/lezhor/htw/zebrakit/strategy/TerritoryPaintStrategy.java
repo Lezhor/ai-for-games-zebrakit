@@ -2,6 +2,7 @@ package lezhor.htw.zebrakit.strategy;
 
 import lenz.htw.zebrakit.PowerupType;
 import lezhor.htw.zebrakit.analysis.InfluenceMap;
+import lezhor.htw.zebrakit.analysis.OpponentWeights;
 import lezhor.htw.zebrakit.analysis.TerritoryUtils;
 import lezhor.htw.zebrakit.core.BoardConstants;
 import lezhor.htw.zebrakit.core.BotContext;
@@ -30,7 +31,9 @@ import java.util.Random;
  */
 public class TerritoryPaintStrategy implements Strategy {
     private static final int INFLUENCE_GRID_SIZE = 64;
-    private static final int INFLUENCE_SMOOTHING_RADIUS_PX = 64;
+    private static final int DIFFUSION_ITERATIONS = 6;
+    private static final double DIFFUSION_ALPHA = 0.5;
+    private static final double CROWD_STRENGTH = 0.6;
     private static final long TARGET_REFRESH_MS = 2000;
     private static final double ARRIVAL_RADIUS_PX = 20;
     private static final int PAINTED_THRESHOLD = 220;
@@ -43,7 +46,7 @@ public class TerritoryPaintStrategy implements Strategy {
     private final MovementProvider territoryMovement;
     private final Navigator powerupMovement;
     private final InfluenceMap influenceMap =
-            new InfluenceMap(INFLUENCE_GRID_SIZE, BoardConstants.MAP_SIZE, INFLUENCE_SMOOTHING_RADIUS_PX);
+            new InfluenceMap(INFLUENCE_GRID_SIZE, BoardConstants.MAP_SIZE, DIFFUSION_ITERATIONS, DIFFUSION_ALPHA);
     private final WanderMovement wander = new WanderMovement();
     private final Random rand = new Random();
 
@@ -60,6 +63,7 @@ public class TerritoryPaintStrategy implements Strategy {
     public Vector2[] decide(GameState state, BotContext[] bots) {
         influenceMapUpdatedThisTick = false;
         int myPlayerNumber = state.myPlayerNumber();
+        OpponentWeights.Weights weights = TerritoryUtils.computeWeights(state, myPlayerNumber, OpponentWeights.DEFAULT_SIGMA);
 
         Point[] positions = new Point[BotRoles.BOT_COUNT];
         for (int i = 0; i < positions.length; i++) {
@@ -74,11 +78,11 @@ public class TerritoryPaintStrategy implements Strategy {
                     targets[i] = powerupTarget;
                 } else {
                     if (!influenceMapUpdatedThisTick) {
-                        influenceMap.update(state, myPlayerNumber);
+                        influenceMap.update(state, myPlayerNumber, weights);
                         influenceMapUpdatedThisTick = true;
                     }
                     targets[i] = influenceMap.bestTargetFor(state, bots[i], positions, targets,
-                            ALPHA[i], DISPERSION_SIGMA, powerupMovement, rand);
+                            ALPHA[i], DISPERSION_SIGMA, CROWD_STRENGTH, powerupMovement, rand);
                 }
                 targetStartTimes[i] = System.currentTimeMillis();
             }

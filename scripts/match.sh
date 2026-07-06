@@ -12,6 +12,7 @@ function print_help {
     echo "  --port <port>             The server port (default: 22135)"
     echo "  --nav <nav1[,nav2,nav3]>  Override the navigator each strategy uses. Same fill-forward rule as strategies:"
     echo "                            one name applies to all three, or give up to three comma-separated."
+    echo "  --time <secs>             Assumed match length for time-aware strategies (default: 60)"
     echo "  --help                    Print this help message"
     echo ""
     # Ask the CLI directly instead of guessing, so this listing can't drift out of date.
@@ -21,6 +22,7 @@ function print_help {
 HOST="127.0.0.1"
 PORT="22135"
 NAV=""
+TIME=""
 STRATEGIES=()
 
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
@@ -37,6 +39,10 @@ while [[ $# -gt 0 ]]; do
       ;;
     --nav)
       NAV="$2"
+      shift 2
+      ;;
+    --time)
+      TIME="$2"
       shift 2
       ;;
     --help)
@@ -92,13 +98,16 @@ NAV1_ARGS=(); if [ -n "$NAV1" ]; then NAV1_ARGS=(--nav "$NAV1"); fi
 NAV2_ARGS=(); if [ -n "$NAV2" ]; then NAV2_ARGS=(--nav "$NAV2"); fi
 NAV3_ARGS=(); if [ -n "$NAV3" ]; then NAV3_ARGS=(--nav "$NAV3"); fi
 
-"$DIR/run.sh" --name "$NAME1" --host "$HOST" --port "$PORT" "${NAV1_ARGS[@]}" "$STRATEGY1" &
+# One match length applies to all three players.
+TIME_ARGS=(); if [ -n "$TIME" ]; then TIME_ARGS=(--time "$TIME"); fi
+
+"$DIR/run.sh" --name "$NAME1" --host "$HOST" --port "$PORT" "${NAV1_ARGS[@]}" "${TIME_ARGS[@]}" "$STRATEGY1" &
 PID1=$!
 
-"$DIR/run.sh" --name "$NAME2" --host "$HOST" --port "$PORT" "${NAV2_ARGS[@]}" "$STRATEGY2" &
+"$DIR/run.sh" --name "$NAME2" --host "$HOST" --port "$PORT" "${NAV2_ARGS[@]}" "${TIME_ARGS[@]}" "$STRATEGY2" &
 PID2=$!
 
-"$DIR/run.sh" --name "$NAME3" --host "$HOST" --port "$PORT" "${NAV3_ARGS[@]}" "$STRATEGY3" &
+"$DIR/run.sh" --name "$NAME3" --host "$HOST" --port "$PORT" "${NAV3_ARGS[@]}" "${TIME_ARGS[@]}" "$STRATEGY3" &
 PID3=$!
 
 echo "Clients launched. Waiting for them to finish..."
