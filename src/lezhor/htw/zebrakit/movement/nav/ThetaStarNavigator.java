@@ -1,11 +1,16 @@
-package lezhor.htw.zebrakit.nav;
+package lezhor.htw.zebrakit.movement.nav;
 
 import lenz.htw.zebrakit.e;
+import lezhor.htw.zebrakit.core.BoardConstants;
+import lezhor.htw.zebrakit.core.BotContext;
+import lezhor.htw.zebrakit.core.GameState;
+import lezhor.htw.zebrakit.core.Vector2;
+
 import java.awt.Point;
 import java.util.*;
 
 public class ThetaStarNavigator implements Navigator {
-    private static final int MAP_SIZE = 1024;
+    private static final int MAP_SIZE = BoardConstants.MAP_SIZE;
     private final int inflationRadius;
     private final int scale;
     private final int scaledSize;
@@ -80,7 +85,7 @@ public class ThetaStarNavigator implements Navigator {
     @Override
     public List<Point> findPath(Point start, Point end) {
         if (grid == null) return null;
-        
+
         Point sStart = new Point(start.x / scale, start.y / scale);
         Point sEnd = new Point(end.x / scale, end.y / scale);
 
@@ -160,11 +165,11 @@ public class ThetaStarNavigator implements Navigator {
             curr = curr.parent;
         }
         Collections.reverse(path);
-        
+
         // Ensure exact start and end match
         path.set(0, start);
         path.set(path.size() - 1, end);
-        
+
         return path;
     }
 
@@ -172,7 +177,7 @@ public class ThetaStarNavigator implements Navigator {
     public double getPathDistance(Point start, Point end) {
         List<Point> path = findPath(start, end);
         if (path == null) return Double.MAX_VALUE;
-        
+
         double totalDist = 0.0;
         for (int i = 0; i < path.size() - 1; i++) {
             totalDist += path.get(i).distance(path.get(i + 1));
@@ -181,16 +186,14 @@ public class ThetaStarNavigator implements Navigator {
     }
 
     @Override
-    public double[] getNextMoveDirection(Point currentPos, Point targetPos) {
+    public Vector2 getNextMoveDirection(GameState state, BotContext self, Point currentPos, Point targetPos) {
         List<Point> path = findPath(currentPos, targetPos);
         if (path == null || path.size() < 2) {
-            return new double[]{0.0, 0.0};
+            return Vector2.ZERO;
         }
         // The path[0] is the current position, path[1] is the next waypoint
         Point nextPoint = path.get(1);
-        double dx = nextPoint.x - currentPos.x;
-        double dy = nextPoint.y - currentPos.y;
-        return new double[]{dx, dy};
+        return Vector2.towards(currentPos, nextPoint).normalized();
     }
 
     private boolean isValid(int x, int y) {
@@ -220,7 +223,7 @@ public class ThetaStarNavigator implements Navigator {
 
         for (; n > 0; --n) {
             if (!isValid(x, y) || !grid[x][y]) return false;
-            
+
             if (error > 0) {
                 x += x_inc;
                 error -= dy;
