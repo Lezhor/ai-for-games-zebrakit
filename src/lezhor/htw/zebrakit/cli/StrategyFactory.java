@@ -4,6 +4,8 @@ import lenz.htw.zebrakit.net.NetworkClient;
 import lezhor.htw.zebrakit.movement.MovementProvider;
 import lezhor.htw.zebrakit.movement.nav.Navigator;
 import lezhor.htw.zebrakit.strategy.*;
+import lezhor.htw.zebrakit.strategy.bresenham.BresenhamConfig;
+import lezhor.htw.zebrakit.strategy.support.IniConfig;
 import lezhor.htw.zebrakit.strategy.support.StrategyConfig;
 
 import java.io.IOException;
@@ -40,6 +42,10 @@ public final class StrategyFactory {
                 Navigator powerupNav = NavigatorFactory.createInitialized("Theta", client);
                 StrategyConfig strategyConfig = loadStrategyConfig(configPath);
                 return new TerritoryDiffusionStrategy(territoryNav, powerupNav, matchLength, strategyConfig);
+            },
+            "Bresenham", (client, navOverride, matchLength, configPath) -> {
+                Navigator powerupNav = NavigatorFactory.createInitialized("Theta", client);
+                return new BresenhamStrategy(powerupNav, BresenhamConfig.from(loadIniConfig(configPath)));
             }
     );
 
@@ -60,6 +66,15 @@ public final class StrategyFactory {
         if (strategyConfigPath == null) return null;
         try {
             return StrategyConfig.load(strategyConfigPath);
+        } catch (IOException e) {
+            throw new UncheckedIOException("Failed to load --config " + strategyConfigPath, e);
+        }
+    }
+
+    private static IniConfig loadIniConfig(String strategyConfigPath) {
+        if (strategyConfigPath == null) return null;
+        try {
+            return IniConfig.load(strategyConfigPath);
         } catch (IOException e) {
             throw new UncheckedIOException("Failed to load --config " + strategyConfigPath, e);
         }
