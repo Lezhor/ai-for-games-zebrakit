@@ -10,8 +10,8 @@ import lezhor.htw.zebrakit.strategy.support.IniConfig;
  *
  * <p>The config is organised into the same {@code [Section]}s as the ini file: {@code General}
  * (weights shared across evaluators), {@code Raycast}, {@code Walls}, {@code PaintValue},
- * {@code BotDistance}, {@code CenterPull}, and {@code Powerups}. Evaluators receive this whole
- * struct at {@code init(...)} and read the fields they need.
+ * {@code BotDistance}, {@code CenterPull}, {@code SlowAvoid}, and {@code Powerups}. Evaluators
+ * receive this whole struct at {@code init(...)} and read the fields they need.
  */
 public record BresenhamConfig(
         // [General] — shared across evaluators
@@ -42,6 +42,9 @@ public record BresenhamConfig(
         double centerOuterRadiusPx,
         double centerInnerReward,
         double centerOuterReward,
+        // [SlowAvoid]
+        double slowAvoidWeight,
+        double slowAvoidRadiusPx,
         // [Powerups]
         boolean powerupsEnabled,
         double powerupSearchRadiusPx,
@@ -57,6 +60,7 @@ public record BresenhamConfig(
     private static final String PAINT_VALUE = "PaintValue";
     private static final String BOT_DISTANCE = "BotDistance";
     private static final String CENTER_PULL = "CenterPull";
+    private static final String SLOW_AVOID = "SlowAvoid";
     private static final String POWERUPS = "Powerups";
 
     /** Builds the config from an ini file, or returns all-defaults when {@code config} is {@code null}. */
@@ -90,6 +94,9 @@ public record BresenhamConfig(
                 d(config, CENTER_PULL, "OUTER_RADIUS_PX", 480),
                 d(config, CENTER_PULL, "INNER_REWARD", 1.0),
                 d(config, CENTER_PULL, "OUTER_REWARD", 0.0),
+
+                d(config, SLOW_AVOID, "WEIGHT", 1000.0),
+                d(config, SLOW_AVOID, "RADIUS_PX", 30),
 
                 b(config, POWERUPS, "ENABLED", true),
                 d(config, POWERUPS, "SEARCH_RADIUS_PX", 700),

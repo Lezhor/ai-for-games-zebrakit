@@ -11,6 +11,7 @@ import lezhor.htw.zebrakit.strategy.bresenham.CenterPullEvaluator;
 import lezhor.htw.zebrakit.strategy.bresenham.LeaderWeighting;
 import lezhor.htw.zebrakit.strategy.bresenham.PaintValueEvaluator;
 import lezhor.htw.zebrakit.strategy.bresenham.PixelEvaluator;
+import lezhor.htw.zebrakit.strategy.bresenham.SlowAvoidEvaluator;
 import lezhor.htw.zebrakit.strategy.bresenham.PlayerWeights;
 import lezhor.htw.zebrakit.strategy.bresenham.PowerupOverride;
 import lezhor.htw.zebrakit.strategy.bresenham.RayScanner;
@@ -59,7 +60,8 @@ public class BresenhamStrategy implements Strategy {
         this.powerupOverride = new PowerupOverride(powerupNav, config);
         this.wallField = new WallField(config.wallGridScale(), config.wallRadiusPx());
         this.evaluators = List.of(
-                new PaintValueEvaluator(), new BotDistanceEvaluator(), new CenterPullEvaluator());
+                new PaintValueEvaluator(), new BotDistanceEvaluator(),
+                new CenterPullEvaluator(), new SlowAvoidEvaluator());
         this.rayScanner = new RayScanner(config, evaluators, wallField);
         Arrays.fill(committed, Vector2.ZERO);
     }
