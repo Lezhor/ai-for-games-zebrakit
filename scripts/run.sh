@@ -13,6 +13,7 @@ function print_help {
     echo "  --nav <name>    Override the movement/navigator this strategy uses (see --list-strategies for choices)"
     echo "  --time <secs>   Assumed match length for time-aware strategies (default: 60)"
     echo "  --config <path> Path to a strategy config.ini (only strategies that support one use it)"
+    echo "  --win-phrase <phrase>  The phrase the bot shouts on winning (default: gg). Quote it to include spaces."
     echo "  --help          Print this help message"
     echo ""
     # Ask the CLI directly instead of guessing, so this listing can't drift out of date.
@@ -25,6 +26,7 @@ PORT=""
 NAV=""
 TIME=""
 CONFIG=""
+WIN_PHRASE=""
 STRATEGY_NAME=""
 
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
@@ -53,6 +55,10 @@ while [[ $# -gt 0 ]]; do
       ;;
     --config)
       CONFIG="$2"
+      shift 2
+      ;;
+    --win-phrase)
+      WIN_PHRASE="$2"
       shift 2
       ;;
     --help)
@@ -92,6 +98,15 @@ if [ -n "$PORT" ]; then ARGS+=(--port "$PORT"); fi
 if [ -n "$NAV" ]; then ARGS+=(--nav "$NAV"); fi
 if [ -n "$TIME" ]; then ARGS+=(--time "$TIME"); fi
 if [ -n "$CONFIG" ]; then ARGS+=(--config "$CONFIG"); fi
+if [ -n "$WIN_PHRASE" ]; then ARGS+=(--win-phrase "$WIN_PHRASE"); fi
+
+# Gradle's --args takes ONE string that it re-splits on whitespace, respecting quotes. So wrap each
+# argument in double quotes: this keeps multi-word values (e.g. --win-phrase "the champion") together
+# instead of being word-split. "${ARGS[*]}" alone would flatten them and lose the spaces.
+ARGS_STR=""
+for arg in "${ARGS[@]}"; do
+  ARGS_STR+="\"$arg\" "
+done
 
 cd "$DIR/.." || exit
-gradle run -q --args="${ARGS[*]}"
+gradle run -q --args="$ARGS_STR"

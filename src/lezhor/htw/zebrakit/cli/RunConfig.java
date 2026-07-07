@@ -6,5 +6,5 @@ package lezhor.htw.zebrakit.cli;
  * no port, the game server always listens on {@link Defaults#PORT}.
  */
 public record RunConfig(String strategyName, String botName, String host, String port, String navOverride,
-                        int matchLengthSeconds, String strategyConfigPath) {
+                        int matchLengthSeconds, String strategyConfigPath, String winPhrase) {
 }

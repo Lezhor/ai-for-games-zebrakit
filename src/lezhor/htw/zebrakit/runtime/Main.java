@@ -2,7 +2,6 @@ package lezhor.htw.zebrakit.runtime;
 
 import lenz.htw.zebrakit.net.NetworkClient;
 import lezhor.htw.zebrakit.cli.ArgParser;
-import lezhor.htw.zebrakit.cli.Defaults;
 import lezhor.htw.zebrakit.cli.RunConfig;
 import lezhor.htw.zebrakit.cli.StrategyFactory;
 import lezhor.htw.zebrakit.core.BotContext;
@@ -24,7 +23,7 @@ public class Main {
 
         RunConfig config = ArgParser.parse(args);
 
-        NetworkClient client = new NetworkClient(config.host(), config.botName(), Defaults.WIN_MESSAGE);
+        NetworkClient client = new NetworkClient(config.host(), config.botName(), config.winPhrase());
         GameState state = new GameState(client);
         BotContext[] bots = BotRoles.buildContexts(client);
         Strategy strategy = StrategyFactory.create(config.strategyName(), client, config.navOverride(),

@@ -4,8 +4,9 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * Parses {@code <strategyName> [--name <botName>] [--host <host>] [--port <port>] [--nav <navName>]}.
- * Bot name defaults to the strategy name when {@code --name} is omitted.
+ * Parses {@code <strategyName> [--name <botName>] [--host <host>] [--port <port>] [--nav <navName>]
+ * [--time <seconds>] [--config <path>] [--win-phrase <phrase>]}. Bot name defaults to the strategy
+ * name when {@code --name} is omitted; win phrase defaults to {@link Defaults#WIN_MESSAGE}.
  */
 public final class ArgParser {
     private ArgParser() {
@@ -28,7 +29,7 @@ public final class ArgParser {
     }
 
     public static void printHelp() {
-        System.out.println("Usage: <strategyName> [--name <botName>] [--host <host>] [--port <port>] [--nav <navName>] [--time <seconds>] [--config <path>]");
+        System.out.println("Usage: <strategyName> [--name <botName>] [--host <host>] [--port <port>] [--nav <navName>] [--time <seconds>] [--config <path>] [--win-phrase <phrase>]");
         System.out.println();
         printAvailable();
     }
@@ -44,7 +45,7 @@ public final class ArgParser {
     public static RunConfig parse(String[] args) {
         if (args.length == 0) {
             throw new IllegalArgumentException(
-                    "Usage: <strategyName> [--name <botName>] [--host <host>] [--port <port>] [--nav <navName>] [--time <seconds>] [--config <path>]");
+                    "Usage: <strategyName> [--name <botName>] [--host <host>] [--port <port>] [--nav <navName>] [--time <seconds>] [--config <path>] [--win-phrase <phrase>]");
         }
 
         String strategyName = args[0];
@@ -66,8 +67,9 @@ public final class ArgParser {
         String navOverride = flags.get("nav");
         int matchLengthSeconds = parseIntOrDefault(flags.get("time"), Defaults.MATCH_LENGTH_SECONDS);
         String strategyConfigPath = flags.get("config");
+        String winPhrase = flags.getOrDefault("win-phrase", Defaults.WIN_MESSAGE);
 
-        return new RunConfig(strategyName, botName, host, port, navOverride, matchLengthSeconds, strategyConfigPath);
+        return new RunConfig(strategyName, botName, host, port, navOverride, matchLengthSeconds, strategyConfigPath, winPhrase);
     }
 
     private static int parseIntOrDefault(String value, int fallback) {
