@@ -42,6 +42,23 @@ Example:
 # click the server window, press space
 ```
 
+## Best strategy: Bresenham
+
+The strongest agent in this repo is **`BresenhamStrategy`**, tuned via [`config/bresenham.ini`](config/bresenham.ini):
+
+```bash
+./scripts/match.sh Bresenham --config config/bresenham.ini
+```
+
+The idea is deliberately simple and pathfinding-free: each tick it casts rays in N directions from the bot, walks each with Bresenham's line algorithm, and scores the pixels along it (per-pixel average, near pixels weighted more). The bot steers straight down the best-scoring ray; rays are stopped by walls and disqualified if a wall is too close. Scoring is a weighted sum over a list of independent **evaluators**, each with its own `[Section]` of tunable weights:
+
+- **PaintValue** — favors cells where our colour is missing and enemy colour is present (blurred, downscaled grid); the winning opponent is weighted hardest.
+- **BotDistance** — pushes toward open space, away from other bots (teammates vs. enemies weighted separately).
+- **CenterPull** — a gentle radial bias toward the board center, countering edge-hugging.
+- **SlowAvoid** — high-weight veto that steers clear of SLOW powerups (which only hurt whoever grabs them).
+
+A separate powerup override lets bots peel off to grab bombs/rain (the one place a navigator is used). Powerup chasing aside, everything is just "sum a few numbers along each ray and go the best way."
+
 ## Game rules
 
 **Board & scoring** — 1024×1024 grid, walls outside a "flower"-shaped playable area. Each cell holds an RGB-style triplet, one channel per player, starting neutral at 255/255/255. Your score is the sum of your channel over the whole board.
@@ -67,6 +84,6 @@ Each bot paints a soft brush centered on itself every tick (strongest at center,
 
 ## Code structure
 
-Under `src/lezhor/htw/zebrakit/`: `core` (domain model — `GameState`, `BotContext`/`BotRoles`, `Vector2`), `movement` (`MovementProvider` abstraction: `nav` for pathfinding, `steering` for steering behaviors, plus `HybridMovementProvider`), `analysis` (shared scoring/sensing: `InfluenceMap`, `TerritoryUtils`, `OpponentWeights`), `strategy` (one `Strategy` per player controlling all 3 bots — `Idle`, `Dummy`, `RandomWalk`, `RandomTarget`, `PowerupHunt`, `TerritoryPaint`), `cli` (name-based registries for runtime strategy/navigator selection), `runtime` (`Main` entry point, shared `GameLoop`). `agents/Dummy.java` is the original course-provided reference, kept untouched.
+Under `src/lezhor/htw/zebrakit/`: `core` (domain model — `GameState`, `BotContext`/`BotRoles`, `Vector2`), `movement` (`MovementProvider` abstraction: `nav` for pathfinding, `steering` for steering behaviors, plus `HybridMovementProvider`), `analysis` (shared scoring/sensing: `InfluenceMap`, `TerritoryUtils`, `OpponentWeights`), `strategy` (one `Strategy` per player controlling all 3 bots — `Idle`, `Dummy`, `RandomWalk`, `RandomTarget`, `PowerupHunt`, `TerritoryPaint`, `TerritoryDiffusion`, and `Bresenham` (the strongest; its evaluators live in `strategy/bresenham/`)), `cli` (name-based registries for runtime strategy/navigator selection), `runtime` (`Main` entry point, shared `GameLoop`). `agents/Dummy.java` is the original course-provided reference, kept untouched.
 
 Parts of this README.md were coassisted with AI.
