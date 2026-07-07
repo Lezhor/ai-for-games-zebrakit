@@ -65,6 +65,8 @@ A separate powerup override lets bots peel off to grab bombs/rain (the one place
 
 I first threw the heavy machinery at it — `TerritoryPaint`/`TerritoryDiffusion` pick a target area from a wall-aware diffusion/influence grid and then reach it by blending coarse pathfinding with local color-seeking steering, wall avoidance, and turn-rate caps. Honestly I expected that stack to win, but it had far too many entangled knobs to tune, and the almost embarrassingly simple ray-casting idea in `Bresenham` — with a handful of independent per-evaluator weights and no pathfinding at all — ended up clearly outplaying it. xD
 
+The three bots are handled differently too: `Bresenham` runs identical logic for all of them (only each ray's reach scales with the bot's speed), whereas `TerritoryPaint`/`TerritoryDiffusion` give each bot its own area-distance falloff so the fast bot roams far (attacking far away big opponent spashes) while the slow ones stay local and protect the area (and `TerritoryDiffusion` adds per-role turn-rate caps on top). In All algorithms the fast one is prioritized to hunt for collectables (although if a slow one is really close it can still be told to hunt).
+
 ## Game rules
 
 **Board & scoring** — 1024×1024 grid, walls outside a "flower"-shaped playable area. Each cell holds an RGB-style triplet, one channel per player, starting neutral at 255/255/255. Your score is the sum of your channel over the whole board.
