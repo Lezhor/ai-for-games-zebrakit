@@ -2,6 +2,8 @@
 
 A Java client for **Zebrakit**, a 3-player real-time territory-painting game: each player controls 3 bots that move around a shared board and paint it in their color, and whoever holds the most board value when time runs out wins.
 
+Note: This repository wasn't cleaned. aka. it contains all my experimentation Strategies. The best one is `BresenhamStrategy`.
+
 ## Prerequisites
 
 - JDK 17+ (tested on 21/26)
@@ -58,6 +60,10 @@ The idea is deliberately simple and pathfinding-free: each tick it casts rays in
 - **SlowAvoid** — high-weight veto that steers clear of SLOW powerups (which only hurt whoever grabs them).
 
 A separate powerup override lets bots peel off to grab bombs/rain (the one place a navigator is used). Powerup chasing aside, everything is just "sum a few numbers along each ray and go the best way."
+
+### Other strategies
+
+I first threw the heavy machinery at it — `TerritoryPaint`/`TerritoryDiffusion` pick a target area from a wall-aware diffusion/influence grid and then reach it by blending coarse pathfinding with local color-seeking steering, wall avoidance, and turn-rate caps. Honestly I expected that stack to win, but it had far too many entangled knobs to tune, and the almost embarrassingly simple ray-casting idea in `Bresenham` — with a handful of independent per-evaluator weights and no pathfinding at all — ended up clearly outplaying it. xD
 
 ## Game rules
 
